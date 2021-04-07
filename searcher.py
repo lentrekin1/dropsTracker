@@ -33,11 +33,11 @@ Unsubscribe: [UNSUB][TOKEN]
 '''
 email_subject_template = '🚨🚨 158Sir dropped the [ITEM] 🚨🚨'
 
-num_return = 5
+num_return = 11
 old_items = []
 email_file = 'emails.csv'
 email_headers = ['email', 'token']
-delay = .5 * 60
+delay = 5 * 60
 log_upload_delay = 60 * 60
 uploading_users = False
 
