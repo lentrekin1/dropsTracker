@@ -1,17 +1,18 @@
-import requests
-from bs4 import BeautifulSoup
-import csv
 import copy
-import time
-import re
+import csv
 import logging
-import smtplib
 import os
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import re
+import smtplib
+import time
 from datetime import datetime
-from botocore.exceptions import ClientError
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 import boto3
+import requests
+from botocore.exceptions import ClientError
+from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 log_file = 'logs/{:%Y_%m_%d_%H}.log'.format(datetime.now())
@@ -36,7 +37,7 @@ num_return = 5
 old_items = []
 email_file = 'emails.csv'
 email_headers = ['email', 'token']
-delay = 5 * 60
+delay = .5 * 60
 log_upload_delay = 60 * 60
 uploading_users = False
 
@@ -46,10 +47,6 @@ key = os.environ.get('AWS_ACCESS_KEY_ID')
 secret = os.environ.get('AWS_SECRET_ACCESS_KEY')
 s3 = boto3.client('s3')
 
-def schedule_upload():
-    global uploading_users
-    if not uploading_users:
-        upload_users()
 
 def upload_logs():
     upload_log_file = log_file if on_heroku else log_file.split('.')[0] + '-local.log'
@@ -59,6 +56,7 @@ def upload_logs():
         logger.info(f'Uploaded {upload_log_file} to S3 bucket {bucket}')
     except:
         logger.exception(f'Upload of {upload_log_file} to S3 bucket {bucket} failed')
+
 
 def upload_users():
     global uploading_users
@@ -79,6 +77,7 @@ def upload_users():
     except:
         logger.exception(f'Upload of backup {backup_file} to S3 bucket {bucket} failed')
     uploading_users = False
+
 
 def download_users():
     download_file = email_file if on_heroku else email_file.split('.')[0] + '-local.csv'
@@ -104,6 +103,7 @@ def download_users():
         os.remove(tmp_file)
         logger.exception(
             f'Error downloading file {download_file} from S3 bucket {bucket}')
+
 
 def get_emails():
     emails = []
@@ -136,7 +136,8 @@ def broadcast(items):
             msg['To'] = ''
             for email in emails:
                 body = copy.deepcopy(email_body_template)
-                body = body.replace('[TAOBAO]', item['taobao']).replace('[YUPOO]', item['url']).replace('[UNSUB]', unsub_url)
+                body = body.replace('[TAOBAO]', item['taobao']).replace('[YUPOO]', item['url']).replace('[UNSUB]',
+                                                                                                        unsub_url)
                 body = body.replace('[TOKEN]', email['token'])
                 msg.set_payload([MIMEText(body, 'plain')])
                 msg.replace_header('To', email['email'])
@@ -164,22 +165,25 @@ def get_items():
     logger.info(f'Found {len(found)} items on 158Sirs page, only returning most recent {num_return}')
     return found[:num_return]
 
+
 def get_new():
     global old_items
     items = get_items()
     new_items = []
+    old_urls = [x['url'] for x in old_items]
     for item in items:
         page = requests.get(item['url'])
         soup = BeautifulSoup(page.text, 'html.parser')
         try:
             taobao = soup.find('a', string=re.compile('https://item.taobao.com/item*')).get('href')
-            if item not in old_items:
+            if item['url'] not in old_urls:
                 item['taobao'] = taobao
                 new_items.append(item)
         except AttributeError:
             del item
     logger.info(f'Found {len(new_items)} new items')
     return new_items
+
 
 def search():
     global old_items
@@ -202,5 +206,20 @@ def search():
 
 
 if __name__ == '__main__':
+    import sys
+
+    log_file = 'logs/{:%Y_%m_%d_%H}.log'.format(datetime.now())
+    log_format = u'%(asctime)s | %(levelname)-8s | %(message)s'
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    handler = logging.FileHandler(log_file, encoding='utf-8')
+    formatter = logging.Formatter(log_format)
+    handler.setFormatter(formatter)
+    root_logger.addHandler(handler)
+    printer = logging.StreamHandler(sys.stdout)
+    printer.setLevel(logging.DEBUG)
+    printer.setFormatter(formatter)
+    root_logger.addHandler(printer)
+
     search()
-    #broadcast([{'name': 'bigtest', 'url': 'http://yupolink.net', 'taobao': 'https://tao.com'}, {'name': 'bigtest2', 'url': 'http://yupolink.net', 'taobao': 'https://tao.com'}])
+    # broadcast([{'name': 'bigtest', 'url': 'http://yupolink.net', 'taobao': 'https://tao.com'}, {'name': 'bigtest2', 'url': 'http://yupolink.net', 'taobao': 'https://tao.com'}])

@@ -1,13 +1,14 @@
-from flask import Flask, render_template, request, flash, redirect
-import re
 import csv
-import os
-import sys
-from datetime import datetime
 import logging
-import threading
+import os
 import random
+import re
 import string
+import sys
+import threading
+from datetime import datetime
+
+from flask import Flask, render_template, request, flash, redirect
 
 if not os.path.isdir('logs'):
     os.mkdir('logs')
@@ -56,6 +57,7 @@ def add_email(email):
         logger.info(f'Wrote email {email} with token {token} to {email_file}')
     searcher.upload_users()
 
+
 def save_emails(emails):
     with open(email_file, 'w', encoding='utf-8', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=searcher.email_headers)
@@ -63,15 +65,18 @@ def save_emails(emails):
         writer.writerows(emails)
     searcher.upload_users()
 
+
 @app.before_first_request
 def set_link():
     searcher.unsub_url = '/'.join(request.base_url.split('/')[:-1]) + searcher.unsub_url
+
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == 'POST':
         if 'email' in request.form:
-            logger.info(f'User from IP {request.remote_addr} submitted email {request.form["email"]} using a POST request')
+            logger.info(
+                f'User from IP {request.remote_addr} submitted email {request.form["email"]} using a POST request')
             if re.match(email_regex, request.form["email"]):
                 logger.info(f'Email {request.form["email"]} passed validate_email(), adding to {email_file}')
                 add_email(request.form["email"])
@@ -80,10 +85,12 @@ def home():
                 logger.info(f'Email {request.form["email"]} failed validate_email(), rejecting')
                 flash('Please enter a valid email')
         else:
-            logger.info(f'User from IP {request.remote_addr} submitted a form that did not have an email in it: {request.form.to_dict(flat=False)}')
+            logger.info(
+                f'User from IP {request.remote_addr} submitted a form that did not have an email in it: {request.form.to_dict(flat=False)}')
         return redirect('/')
     logger.info(f'User from IP {request.remote_addr} connected to the site using a GET request')
     return render_template('home.html')
+
 
 @app.route('/unsubscribe')
 def unsub():
@@ -96,17 +103,15 @@ def unsub():
                     old_emails = [d for d in old_emails if d.get('token') != request.args.get('token')]
                     save_emails(old_emails)
                     return 'You have been successfully unsubscribed'
-            logger.info(f'IP {request.remote_addr} attempted to use an invalid token {request.args.get("token")} to unsubscribe')
+            logger.info(
+                f'IP {request.remote_addr} attempted to use an invalid token {request.args.get("token")} to unsubscribe')
         else:
             logger.info(f'IP {request.remote_addr} tried to unsubscribe without a token')
     else:
-        logger.info(f'IP {request.remote_addr} attempted to unsubscribe with token {request.args.get("token")} but no emails were found')
+        logger.info(
+            f'IP {request.remote_addr} attempted to unsubscribe with token {request.args.get("token")} but no emails were found')
     return redirect('/')
 
-@app.route('/test')
-def test():
-    searcher.broadcast([{'name': 'bigtest', 'url': 'http://yupolink.net', 'taobao': 'https://tao.com'}, {'name': 'bigtest2', 'url': 'http://yupolink.net', 'taobao': 'https://tao.com'}])
-    return 'broadcast'
 
 if __name__ == '__main__':
     app.run(port=80)
