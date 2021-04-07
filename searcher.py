@@ -3,54 +3,51 @@ from bs4 import BeautifulSoup
 import csv
 import copy
 import time
-import yagmail
 import re
 import logging
-import sys
+import smtplib
 import os
-from datetime import datetime
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 logger = logging.getLogger(__name__)
 
 base_url = 'https://158sir.x.yupoo.com/albums'
 
 my_email = '158SirDrops@gmail.com'
-yag = yagmail.SMTP(my_email)
-email_body_template = ['Taobao Link: [TAOBAO]', 'Yupoo Link: [YUPOO]']
+password = os.environ['EMAIL_PASS']
+unsub_url = 'unsuburl/unsubscribe?token='
+email_body_template = f'''
+Taobao Link: [TAOBAO]
+
+Yupoo Link: [YUPOO]
+
+
+
+Unsubscribe: {unsub_url}[TOKEN]
+'''
 email_subject_template = '🚨🚨 158Sir dropped the [ITEM] 🚨🚨'
 
 req = requests.get(base_url)
 soup = BeautifulSoup(req.text, 'html.parser')
 num_return = 5
 
-item_file = 'old.csv'
+old_items = []
 email_file = 'emails.csv'
-email_header = 'email'
-item_headers = ['name', 'url']
-delay = 5 * 1
+email_headers = ['email', 'token']
+delay = 5 * 60
 
-if not os.path.isfile(item_file):
-    with open(item_file, 'w', encoding='utf-8', newline='') as f:
+if not os.path.isfile(email_file):
+    with open(email_file, 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(item_headers)
-
-# yagmail.register('mygmailusername', 'mygmailpassword')
-def send_email(recipient, item, taobao, yupoo):
-    subject = email_subject_template.replace('[ITEM]', item)
-    body = copy.deepcopy(email_body_template)
-    body[0] = body[0].replace('[TAOBAO]', taobao)
-    body[1] = body[1].replace('[YUPOO]', yupoo)
-    yag.send(recipient, subject, body)
-    logger.info(f'Send email about item {item} to {recipient}')
-
+        writer.writerow(email_headers)
 
 def get_emails():
     emails = []
     with open(email_file, 'r', encoding='utf-8') as f:
-        reader = csv.reader(f)
+        reader = csv.DictReader(f)
         for row in reader:
-            if row[0] != email_header:
-                emails.append(row[0])
+            emails.append(row)
     if len(emails) > 0:
         logger.info(f'Loaded {len(emails)} from {email_file}')
         return emails
@@ -60,42 +57,54 @@ def get_emails():
 
 
 def broadcast(items):
-    logger.info(f'Broadcasting for items {items}')
+    logger.info(f'Broadcasting for {len(items)} items')
     emails = get_emails()
     if emails:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(my_email, password)
+        logger.info('SMTP connection opened')
+        logger.info(f'Broadcasting {len(items)} items to {len(emails)} emails')
         for item in items:
+            msg = MIMEMultipart()
+            subject = copy.deepcopy(email_subject_template)
+            msg["Subject"] = subject.replace('[ITEM]', item['name'])
+            msg["From"] = my_email
+            msg['To'] = ''
             for email in emails:
-                send_email(email, item['name'], item['taobao'], item['url'])
-        logger.info(f'Finished broadcasting for items {items}')
+                body = copy.deepcopy(email_body_template)
+                body = body.replace('[TAOBAO]', item['taobao']).replace('[YUPOO]', item['url'])
+                body = body.replace('[TOKEN]', email['token'])
+                msg.set_payload([MIMEText(body, 'plain')])
+                msg.replace_header('To', email['email'])
+                text = msg.as_string()
+                try:
+                    server.sendmail(my_email, email['email'], text)
+                    logger.info(f'Send email about item {item} to {email["email"]}')
+                except:
+                    logger.exception(f'Error sending an email about item {item} to email {email["email"]}')
+
+        logger.info(f'Finished broadcasting for {len(items)} items to {len(emails)} people')
+        server.close()
+        logger.info('SMTP connection closed')
+    else:
+        logger.info('No emails found')
 
 
 def get_items():
     found = []
     for e in soup.find_all('div', attrs={'class': 'showindex__children'}):
         for i in e.find_all('a'):
-            found.append({'name': i.get('title'), 'url': '/' + i.get('href').split('/')[2]})
+            found.append({'name': i.get('title'), 'url': base_url + '/' + i.get('href').split('/')[2]})
     logger.info(f'Found {len(found)} items on 158Sirs page, only returning most recent {num_return}')
     return found[:num_return]
 
-def save_items(items):
-    to_save = []
-    for item in items:
-        to_save.append({'name': item['name'], 'url': item['url']})
-    with open(item_file, 'a', encoding='utf-8', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=item_headers)
-        writer.writerows(to_save)
-    logger.info(f'Wrote {len(to_save)} items to {item_file}: {to_save}')
-
 def get_new():
+    global old_items
     items = get_items()
-    old_items = []
     new_items = []
-    with open(item_file, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            old_items.append(row)
     for item in items:
-        page = requests.get(base_url + item['url'])
+        page = requests.get(item['url'])
         soup = BeautifulSoup(page.text, 'html.parser')
         try:
             taobao = soup.find('a', string=re.compile('https://item.taobao.com/item*')).get('href')
@@ -104,25 +113,18 @@ def get_new():
                 new_items.append(item)
         except AttributeError:
             del item
-    logger.info(f'Found {len(new_items)} new items: {new_items}')
-    save_items(new_items)
+    logger.info(f'Found {len(new_items)} new items')
     return new_items
 
-
-def fill_items(items):
-    for item in items:
-        item['url'] = base_url + item['url']
-    logger.info(f'Filled out {len(items)} items: {items}')
-    return items
-
-
 def search():
+    global old_items
     logger.info('---watcher.watch() starting---')
+    old_items = get_new()
+    logger.info(f'Loaded {len(old_items)} old items')
     while True:
         logger.info('Checking 158sirs page for new items')
         new_items = get_new()
         if len(new_items) > 0:
-            new_items = fill_items(new_items)
             broadcast(new_items)
         else:
             logger.info('No new items found')
@@ -131,5 +133,5 @@ def search():
 
 
 if __name__ == '__main__':
-    search()
-
+    #search()
+    broadcast([{'name': 'unsubtest', 'url': 'yupoo/erwgt', 'taobao': 'taobao/1234567'}])
