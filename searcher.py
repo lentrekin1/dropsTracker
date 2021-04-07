@@ -20,7 +20,7 @@ base_url = 'https://158sir.x.yupoo.com/albums'
 
 my_email = '158SirDrops@gmail.com'
 password = os.environ['EMAIL_PASS']
-unsub_url = 'unsuburl/unsubscribe?token='
+unsub_url = '/unsubscribe?token='
 email_body_template = f'''
 Taobao Link: [TAOBAO]
 
@@ -28,7 +28,7 @@ Yupoo Link: [YUPOO]
 
 
 
-Unsubscribe: {unsub_url}[TOKEN]
+Unsubscribe: [UNSUB][TOKEN]
 '''
 email_subject_template = '🚨🚨 158Sir dropped the [ITEM] 🚨🚨'
 
@@ -36,8 +36,8 @@ num_return = 5
 old_items = []
 email_file = 'emails.csv'
 email_headers = ['email', 'token']
-delay = .5 * 60
-log_upload_delay = 0.5 * 60
+delay = 5 * 60
+log_upload_delay = 60 * 60
 uploading_users = False
 
 on_heroku = True if os.environ.get('on_heroku') == 'True' else False
@@ -136,7 +136,7 @@ def broadcast(items):
             msg['To'] = ''
             for email in emails:
                 body = copy.deepcopy(email_body_template)
-                body = body.replace('[TAOBAO]', item['taobao']).replace('[YUPOO]', item['url'])
+                body = body.replace('[TAOBAO]', item['taobao']).replace('[YUPOO]', item['url']).replace('[UNSUB]', unsub_url)
                 body = body.replace('[TOKEN]', email['token'])
                 msg.set_payload([MIMEText(body, 'plain')])
                 msg.replace_header('To', email['email'])
@@ -203,3 +203,4 @@ def search():
 
 if __name__ == '__main__':
     search()
+    #broadcast([{'name': 'bigtest', 'url': 'http://yupolink.net', 'taobao': 'https://tao.com'}, {'name': 'bigtest2', 'url': 'http://yupolink.net', 'taobao': 'https://tao.com'}])

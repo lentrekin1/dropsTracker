@@ -63,6 +63,10 @@ def save_emails(emails):
         writer.writerows(emails)
     searcher.upload_users()
 
+@app.before_first_request
+def set_link():
+    searcher.unsub_url = '/'.join(request.base_url.split('/')[:-1]) + searcher.unsub_url
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == 'POST':
@@ -98,6 +102,11 @@ def unsub():
     else:
         logger.info(f'IP {request.remote_addr} attempted to unsubscribe with token {request.args.get("token")} but no emails were found')
     return redirect('/')
+
+@app.route('/test')
+def test():
+    searcher.broadcast([{'name': 'bigtest', 'url': 'http://yupolink.net', 'taobao': 'https://tao.com'}, {'name': 'bigtest2', 'url': 'http://yupolink.net', 'taobao': 'https://tao.com'}])
+    return 'broadcast'
 
 if __name__ == '__main__':
     app.run(port=80)
