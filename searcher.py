@@ -9,8 +9,12 @@ import smtplib
 import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from datetime import datetime
+from botocore.exceptions import ClientError
+import boto3
 
 logger = logging.getLogger(__name__)
+log_file = 'logs/{:%Y_%m_%d_%H}.log'.format(datetime.now())
 
 base_url = 'https://158sir.x.yupoo.com/albums'
 
@@ -28,19 +32,78 @@ Unsubscribe: {unsub_url}[TOKEN]
 '''
 email_subject_template = '🚨🚨 158Sir dropped the [ITEM] 🚨🚨'
 
-req = requests.get(base_url)
-soup = BeautifulSoup(req.text, 'html.parser')
 num_return = 5
-
 old_items = []
 email_file = 'emails.csv'
 email_headers = ['email', 'token']
-delay = 5 * 60
+delay = .5 * 60
+log_upload_delay = 0.5 * 60
+uploading_users = False
 
-if not os.path.isfile(email_file):
-    with open(email_file, 'w', encoding='utf-8', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(email_headers)
+on_heroku = True if os.environ.get('on_heroku') == 'True' else False
+bucket = '158sir-drops'
+key = os.environ.get('AWS_ACCESS_KEY_ID')
+secret = os.environ.get('AWS_SECRET_ACCESS_KEY')
+s3 = boto3.client('s3')
+
+def schedule_upload():
+    global uploading_users
+    if not uploading_users:
+        upload_users()
+
+def upload_logs():
+    upload_log_file = log_file if on_heroku else log_file.split('.')[0] + '-local.log'
+    try:
+        with open(log_file, 'rb') as f:
+            s3.upload_fileobj(f, bucket, upload_log_file)
+        logger.info(f'Uploaded {upload_log_file} to S3 bucket {bucket}')
+    except:
+        logger.exception(f'Upload of {upload_log_file} to S3 bucket {bucket} failed')
+
+def upload_users():
+    global uploading_users
+    uploading_users = True
+    upload_file = email_file if on_heroku else email_file.split('.')[0] + '-local.csv'
+    try:
+        with open(email_file, 'rb') as f:
+            s3.upload_fileobj(f, bucket, upload_file)
+        logger.info(f'Uploaded {upload_file} to S3 bucket {bucket}')
+    except:
+        logger.exception(f'Upload of {upload_file} to S3 bucket {bucket} failed')
+    backup_file = 'backups/' + email_file.split('.')[0] \
+                  + '-' + datetime.now().strftime('%m.%d.%Y-%H:%M:%S') + '.' + email_file.split('.')[1]
+    try:
+        with open(email_file, 'rb') as f:
+            s3.upload_fileobj(f, bucket, backup_file)
+        logger.info(f'Uploaded backup {backup_file} to S3 bucket {bucket}')
+    except:
+        logger.exception(f'Upload of backup {backup_file} to S3 bucket {bucket} failed')
+    uploading_users = False
+
+def download_users():
+    download_file = email_file if on_heroku else email_file.split('.')[0] + '-local.csv'
+    tmp_file = email_file.split('.')[0] + '.tmp'
+    try:
+        with open(tmp_file, 'wb') as f:
+            s3.download_fileobj(bucket, download_file, f)
+        logger.info(
+            f'Downloaded {download_file} from S3 bucket {bucket} to {tmp_file}')
+        if os.path.isfile(email_file):
+            os.remove(email_file)
+        os.rename(tmp_file, email_file)
+        logger.info(f'Replaced temp file {tmp_file} with {email_file}')
+    except ClientError:
+        os.remove(tmp_file)
+        logger.info(f'File {download_file} not found on S3 bucket {bucket}')
+        if not os.path.isfile(email_file):
+            with open(email_file, 'w', encoding='utf-8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(email_headers)
+                logger.info(f'{email_file} created with header {email_headers}')
+    except:
+        os.remove(tmp_file)
+        logger.exception(
+            f'Error downloading file {download_file} from S3 bucket {bucket}')
 
 def get_emails():
     emails = []
@@ -92,6 +155,8 @@ def broadcast(items):
 
 
 def get_items():
+    req = requests.get(base_url)
+    soup = BeautifulSoup(req.text, 'html.parser')
     found = []
     for e in soup.find_all('div', attrs={'class': 'showindex__children'}):
         for i in e.find_all('a'):
@@ -121,6 +186,7 @@ def search():
     logger.info('---watcher.watch() starting---')
     old_items = get_new()
     logger.info(f'Loaded {len(old_items)} old items')
+    last_log_upload = time.time()
     while True:
         logger.info('Checking 158sirs page for new items')
         new_items = get_new()
@@ -128,10 +194,12 @@ def search():
             broadcast(new_items)
         else:
             logger.info('No new items found')
+        if time.time() - last_log_upload > log_upload_delay:
+            upload_logs()
+            last_log_upload = time.time()
         logger.info(f'Cycle done, sleeping for {delay} seconds')
         time.sleep(delay)
 
 
 if __name__ == '__main__':
-    #search()
-    broadcast([{'name': 'unsubtest', 'url': 'yupoo/erwgt', 'taobao': 'taobao/1234567'}])
+    search()

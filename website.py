@@ -3,18 +3,16 @@ import re
 import csv
 import os
 import sys
-from email.utils import parseaddr
 from datetime import datetime
 import logging
 import threading
-import searcher
 import random
 import string
 
 if not os.path.isdir('logs'):
     os.mkdir('logs')
 
-log_file = 'logs\{:%Y_%m_%d_%H}.log'.format(datetime.now())
+log_file = 'logs/{:%Y_%m_%d_%H}.log'.format(datetime.now())
 log_format = u'%(asctime)s | %(levelname)-8s | %(message)s'
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.INFO)
@@ -29,19 +27,20 @@ root_logger.addHandler(printer)
 
 logger = logging.getLogger(__name__)
 
+import searcher
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ERTHGFwt5y64r3wefDGTHYT@#WEFBT54rwesdfghYTRDEFGBHJk,KJHgfNJ<KuTRGDFSwert'
 email_file = 'emails.csv'
 email_regex = '^(\w|\.|\_|\-)+[@](\w|\_|\-|\.)+[.]\w{2,3}$'
 token_size = 30
+max_changes = 10
+num_changes = 0
 
+searcher.download_users()
 search_thread = threading.Thread(target=searcher.search, args=())
 search_thread.start()
 
-if not os.path.isfile(email_file):
-    with open(email_file, 'w', encoding='utf-8', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(searcher.email_headers)
 
 def add_email(email):
     with open(email_file, 'r', encoding='utf=8') as f:
@@ -55,12 +54,14 @@ def add_email(email):
         writer = csv.DictWriter(f, fieldnames=searcher.email_headers)
         writer.writerow({'email': email, 'token': token})
         logger.info(f'Wrote email {email} with token {token} to {email_file}')
+    searcher.upload_users()
 
 def save_emails(emails):
     with open(email_file, 'w', encoding='utf-8', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=searcher.email_headers)
         writer.writeheader()
         writer.writerows(emails)
+    searcher.upload_users()
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -84,7 +85,7 @@ def home():
 def unsub():
     old_emails = searcher.get_emails()
     if old_emails:
-        if request.args.get('token'):
+        if 'token' in request.args:
             for email in old_emails:
                 if request.args.get('token') == email['token']:
                     logger.info(f'Email address/token {email} unsubscribed from IP {request.remote_addr}')
