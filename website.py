@@ -33,14 +33,15 @@ import searcher
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ERTHGFwt5y64r3wefDGTHYT@#WEFBT54rwesdfghYTRDEFGBHJk,KJHgfNJ<KuTRGDFSwert'
 email_file = 'emails.csv'
+email_headers = ['email', 'token']
 email_regex = '^(\w|\.|\_|\-)+[@](\w|\_|\-|\.)+[.]\w{2,3}$'
 token_size = 30
 max_changes = 10
 num_changes = 0
 
-searcher.download_users()
-search_thread = threading.Thread(target=searcher.search, args=())
-search_thread.start()
+#searcher.download_users()
+#search_thread = threading.Thread(target=searcher.search, args=())
+#search_thread.start()
 
 
 def add_email(email):
@@ -52,7 +53,7 @@ def add_email(email):
                 return
     token = ''.join(random.choices(string.ascii_letters, k=token_size))
     with open(email_file, 'a', encoding='utf-8', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=searcher.email_headers)
+        writer = csv.DictWriter(f, fieldnames=email_headers)
         writer.writerow({'email': email, 'token': token})
         logger.info(f'Wrote email {email} with token {token} to {email_file}')
     searcher.upload_users()
@@ -60,7 +61,7 @@ def add_email(email):
 
 def save_emails(emails):
     with open(email_file, 'w', encoding='utf-8', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=searcher.email_headers)
+        writer = csv.DictWriter(f, fieldnames=email_headers)
         writer.writeheader()
         writer.writerows(emails)
     searcher.upload_users()
