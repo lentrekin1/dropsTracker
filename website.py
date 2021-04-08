@@ -112,6 +112,11 @@ def unsub():
             f'IP {request.remote_addr} attempted to unsubscribe with token {request.args.get("token")} but no emails were found')
     return redirect('/')
 
+@app.route('/cron')
+def log_cron():
+    logger.info('Cron job request received')
+    return 'sniff sniff mr. president'
+
 
 if __name__ == '__main__':
     app.run(port=80)
