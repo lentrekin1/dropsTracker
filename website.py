@@ -24,9 +24,8 @@ token_size = 30
 max_changes = 10
 num_changes = 0
 
-#searcher.download_users()
-#search_thread = threading.Thread(target=searcher.search, args=())
-#search_thread.start()
+search_thread = threading.Thread(target=searcher.search, args=())
+search_thread.start()
 
 
 def add_email(email):

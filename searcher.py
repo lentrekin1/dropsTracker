@@ -85,7 +85,7 @@ def download_users():
     tmp_file = email_file.split('.')[0] + '.tmp'
     try:
         with open(os.getcwd() + '/' + tmp_file, 'wb') as f:
-            s3.download_fileobj(bucket, os.getcwd() + '/' + download_file, f)
+            s3.download_fileobj(bucket, download_file, f)
         logger.info(
             f'Downloaded {download_file} from S3 bucket {bucket} to {tmp_file}')
         if os.path.isfile(os.getcwd() + '/' + email_file):
@@ -189,6 +189,7 @@ def get_new():
 def search():
     global old_items
     logger.info('---watcher.watch() starting---')
+    download_users()
     old_items = get_new()
     logger.info(f'Loaded {len(old_items)} old items')
     last_log_upload = time.time()
@@ -207,5 +208,4 @@ def search():
 
 
 if __name__ == '__main__':
-    download_users()
     search()
