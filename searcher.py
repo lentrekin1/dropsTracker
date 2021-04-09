@@ -85,17 +85,17 @@ def download_users():
     tmp_file = email_file.split('.')[0] + '.tmp'
     try:
         with open(os.getcwd() + '/' + tmp_file, 'wb') as f:
-            s3.download_fileobj(bucket, download_file, f)
+            s3.download_fileobj(bucket, os.getcwd() + '/' + download_file, f)
         logger.info(
             f'Downloaded {download_file} from S3 bucket {bucket} to {tmp_file}')
-        if os.path.isfile(email_file):
-            os.remove(email_file)
-        os.rename(tmp_file, email_file)
+        if os.path.isfile(os.getcwd() + '/' + email_file):
+            os.remove(os.getcwd() + '/' + email_file)
+        os.rename(os.getcwd() + '/' + tmp_file, os.getcwd() + '/' + email_file)
         logger.info(f'Replaced temp file {tmp_file} with {email_file}')
     except ClientError:
         os.remove(tmp_file)
         logger.info(f'File {download_file} not found on S3 bucket {bucket}')
-        if not os.path.isfile(email_file):
+        if not os.path.isfile(os.getcwd() + '/' + email_file):
             with open(os.getcwd() + '/' + email_file, 'w', encoding='utf-8', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(email_headers)
