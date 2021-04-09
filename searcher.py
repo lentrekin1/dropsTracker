@@ -206,7 +206,7 @@ def search():
 
 
 if __name__ == '__main__':
-    '''import sys
+    import sys
 
     log_file = 'logs/{:%Y_%m_%d_%H}.log'.format(datetime.now())
     log_format = u'%(asctime)s | %(levelname)-8s | %(message)s'
@@ -219,6 +219,6 @@ if __name__ == '__main__':
     printer = logging.StreamHandler(sys.stdout)
     printer.setLevel(logging.DEBUG)
     printer.setFormatter(formatter)
-    root_logger.addHandler(printer)'''
+    root_logger.addHandler(printer)
     download_users()
     search()
