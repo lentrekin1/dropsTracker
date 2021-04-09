@@ -121,15 +121,15 @@ def dir_listing(req_path='no file'):
     abs_path = os.path.join(BASE_DIR, req_path)
     print(abs_path)
     # Return 404 if path doesn't exist
-    if not os.path.exists(abs_path):
+    if req_path != 'no file' and not os.path.exists(abs_path):
         return 'file not found'
 
     # Check if path is a file and serve
-    if os.path.isfile(abs_path):
+    if req_path != 'no file' and os.path.isfile(abs_path):
         return send_file(abs_path)
 
     # Show directory contents
-    files = os.listdir(abs_path)
+    files = os.listdir(abs_path if req_path != 'no file' else os.getcwd())
     return render_template('files.html', files=files)
 
 if __name__ == '__main__':
