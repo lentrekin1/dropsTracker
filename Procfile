@@ -1,2 +1,2 @@
 web gunicorn -w 1 website:app
-worker python searcher.py
+worker: python searcher.py
