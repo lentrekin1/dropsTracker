@@ -64,7 +64,7 @@ def upload_users():
     uploading_users = True
     upload_file = email_file if on_heroku else email_file.split('.')[0] + '-local.csv'
     try:
-        with open(email_file, 'rb') as f:
+        with open(os.getcwd() + '/' + email_file, 'rb') as f:
             s3.upload_fileobj(f, bucket, upload_file)
         logger.info(f'Uploaded {upload_file} to S3 bucket {bucket}')
     except:
@@ -72,7 +72,7 @@ def upload_users():
     backup_file = 'backups/' + email_file.split('.')[0] \
                   + '-' + datetime.now().strftime('%m.%d.%Y-%H:%M:%S') + '.' + email_file.split('.')[1]
     try:
-        with open(email_file, 'rb') as f:
+        with open(os.getcwd() + '/' + email_file, 'rb') as f:
             s3.upload_fileobj(f, bucket, backup_file)
         logger.info(f'Uploaded backup {backup_file} to S3 bucket {bucket}')
     except:
@@ -84,7 +84,7 @@ def download_users():
     download_file = email_file if on_heroku else email_file.split('.')[0] + '-local.csv'
     tmp_file = email_file.split('.')[0] + '.tmp'
     try:
-        with open(tmp_file, 'wb') as f:
+        with open(os.getcwd() + '/' + tmp_file, 'wb') as f:
             s3.download_fileobj(bucket, download_file, f)
         logger.info(
             f'Downloaded {download_file} from S3 bucket {bucket} to {tmp_file}')
@@ -96,7 +96,7 @@ def download_users():
         os.remove(tmp_file)
         logger.info(f'File {download_file} not found on S3 bucket {bucket}')
         if not os.path.isfile(email_file):
-            with open(email_file, 'w', encoding='utf-8', newline='') as f:
+            with open(os.getcwd() + '/' + email_file, 'w', encoding='utf-8', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(email_headers)
                 logger.info(f'{email_file} created with header {email_headers}')
@@ -108,7 +108,7 @@ def download_users():
 
 def get_emails():
     emails = []
-    with open(email_file, 'r', encoding='utf-8') as f:
+    with open(os.getcwd() + '/' + email_file, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
             emails.append(row)

@@ -33,14 +33,14 @@ num_changes = 0
 
 
 def add_email(email):
-    with open(email_file, 'r', encoding='utf=8') as f:
+    with open(os.getcwd() + '/' + email_file, 'r', encoding='utf=8') as f:
         reader = csv.DictReader(f)
         for row in reader:
             if row['email'] == email:
                 logger.info(f'Email {email} already found in {email_file}, silently rejecting')
                 return
     token = ''.join(random.choices(string.ascii_letters, k=token_size))
-    with open(email_file, 'a', encoding='utf-8', newline='') as f:
+    with open(os.getcwd() + '/' + email_file, 'a', encoding='utf-8', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=email_headers)
         writer.writerow({'email': email, 'token': token})
         logger.info(f'Wrote email {email} with token {token} to {email_file}')
@@ -48,7 +48,7 @@ def add_email(email):
 
 
 def save_emails(emails):
-    with open(email_file, 'w', encoding='utf-8', newline='') as f:
+    with open(os.getcwd() + '/' + email_file, 'w', encoding='utf-8', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=email_headers)
         writer.writeheader()
         writer.writerows(emails)
