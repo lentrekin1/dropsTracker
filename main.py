@@ -2,6 +2,10 @@ import sys
 import logging
 from datetime import datetime
 import os
+
+if not os.path.isdir('logs'):
+    os.mkdir('logs')
+
 log_file = os.getcwd() + '/' + 'logs/{:%Y_%m_%d_%H}.log'.format(datetime.now())
 log_format = u'%(asctime)s | %(levelname)-8s | %(message)s'
 root_logger = logging.getLogger()
