@@ -11,9 +11,6 @@ from datetime import datetime
 
 from flask import Flask, render_template, request, flash, redirect
 
-if not os.path.isdir('logs'):
-    os.mkdir('logs')
-
 logger = logging.getLogger(__name__)
 
 import searcher
@@ -106,6 +103,13 @@ def log_cron():
     logger.info('Cron job request received')
     return 'sniff sniff mr. president'
 
+@app.route('/test')
+def test():
+    data = []
+    data.append(os.getcwd())
+    data.append('<br>'.join(os.listdir()))
+    data = '<hr>'.join(data)
+    return data
 
 if __name__ == '__main__':
     app.run(port=80)
