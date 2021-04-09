@@ -52,7 +52,7 @@ s3 = boto3.client('s3')
 def upload_logs():
     upload_log_file = log_file if on_heroku else log_file.split('.')[0] + '-local.log'
     try:
-        with open(log_file, 'rb') as f:
+        with open(os.getcwd() + '/' + log_file, 'rb') as f:
             s3.upload_fileobj(f, bucket, upload_log_file)
         logger.info(f'Uploaded {upload_log_file} to S3 bucket {bucket}')
     except:
