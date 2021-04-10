@@ -125,7 +125,9 @@ def dir_listing(req_path='no file'):
 
 @app.route('/test')
 def test():
+    print(searcher.old_items)
     searcher.test()
+    print(searcher.old_items)
     return 'test'
 
 if __name__ == '__main__':
