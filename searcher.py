@@ -29,6 +29,10 @@ Taobao Link: [TAOBAO]
 Yupoo Link: [YUPOO]
 
 
+Donate $1 (cmon you're about to spend more than that anyway):
+    Cashapp: https://cash.app/$158sirdrops
+    Venmo: https://venmo.com/Drops-158Sir
+
 
 Unsubscribe: [UNSUB][TOKEN]
 '''
@@ -207,6 +211,9 @@ def search():
         logger.info(f'Cycle done, sleeping for {delay} seconds')
         time.sleep(delay)
 
+def test():
+    global old_items
+    del old_items[0]
 
 if __name__ == '__main__':
     search()

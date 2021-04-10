@@ -123,5 +123,10 @@ def dir_listing(req_path='no file'):
     files = os.listdir(abs_path if req_path != 'no file' else os.getcwd())
     return render_template('files.html', files=files)
 
+@app.route('/test')
+def t():
+    searcher.test()
+    return 'test'
+
 if __name__ == '__main__':
     app.run(port=80)
