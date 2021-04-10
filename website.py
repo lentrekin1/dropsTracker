@@ -102,14 +102,6 @@ def log_cron():
     logger.info('Cron job request received')
     return 'sniff sniff mr. president'
 
-@app.route('/test')
-def test():
-    data = []
-    data.append(os.getcwd())
-    data.append('<br>'.join(os.listdir()))
-    data = '<hr>'.join(data)
-    return data
-
 from flask import abort, send_file
 @app.route('/file')
 @app.route('/file/<path:req_path>')
