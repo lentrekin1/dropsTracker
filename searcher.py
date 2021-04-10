@@ -38,7 +38,7 @@ num_return = 11
 old_items = []
 email_file = 'emails.csv'
 email_headers = ['email', 'token']
-delay = .5 * 60
+delay = 5 * 60
 log_upload_delay = 60 * 60
 uploading_users = False
 
@@ -48,9 +48,6 @@ key = os.environ.get('AWS_ACCESS_KEY_ID')
 secret = os.environ.get('AWS_SECRET_ACCESS_KEY')
 s3 = boto3.client('s3')
 
-def test():
-    global old_items
-    del old_items[0]
 
 def upload_logs():
     upload_log_file = log_file if on_heroku else log_file.split('.')[0] + '-local.log'
