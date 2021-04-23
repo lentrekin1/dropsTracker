@@ -205,9 +205,9 @@ def search():
             broadcast(new_items)
         else:
             logger.info('No new items found')
-        if time.time() - last_log_upload > log_upload_delay:
-            upload_logs()
-            last_log_upload = time.time()
+        #if time.time() - last_log_upload > log_upload_delay:
+        #    upload_logs()
+        #    last_log_upload = time.time()
         logger.info(f'Cycle done, sleeping for {delay} seconds')
         time.sleep(delay)
 
